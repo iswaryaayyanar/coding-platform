@@ -280,7 +280,7 @@ const LoginPage = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         /* Page Layout */
         .login-page {
           min-height: 100vh;
