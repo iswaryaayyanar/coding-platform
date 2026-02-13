@@ -97,19 +97,20 @@ const Sidebar = () => {
         </NavLink>
       </nav>
 
-      {/* Logout Button */}
-      <button
-        onClick={handleLogout}
-        className="mt-6 py-3 px-4 rounded-xl bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 font-medium transition-all duration-200 shadow-lg hover:shadow-red-500/50 hover:scale-105 flex items-center justify-center gap-2"
-      >
-        <span className="text-lg">🚪</span>
-        <span>Logout</span>
-      </button>
+      <div className="sticky bottom-0 bg-slate-900 pt-4">
+    <button
+      onClick={handleLogout}
+      className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 font-medium transition-all duration-200 shadow-lg hover:shadow-red-500/50 hover:scale-105 flex items-center justify-center gap-2"
+    >
+      <span className="text-lg">🚪</span>
+      <span>Logout</span>
+    </button>
 
-      {/* Footer */}
-      <div className="mt-4 pt-4 border-t border-slate-700 text-center">
-        <p className="text-xs text-slate-500">© 2024 CodePlatform</p>
-      </div>
+    {/* Footer */}
+    <div className="mt-4 pt-4 border-t border-slate-700 text-center">
+      <p className="text-xs text-slate-500">© 2024 CodePlatform</p>
+    </div>
+  </div>
     </aside>
   );
 };

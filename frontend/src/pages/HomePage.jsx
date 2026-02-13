@@ -359,7 +359,7 @@ const Homepage = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .homepage-container {
           max-width: 1400px;
           margin: 0 auto;
@@ -894,7 +894,7 @@ const StatCard = ({ label, value, icon, color }) => {
         <p className="stat-value">{value}</p>
       </div>
 
-      <style jsx>{`
+      <style >{`
         .stat-card {
           background: rgba(255, 255, 255, 0.2);
           backdrop-filter: blur(10px);
@@ -979,7 +979,7 @@ const DifficultyItem = ({ label, count, color }) => {
         />
       </div>
 
-      <style jsx>{`
+      <style >{`
         .difficulty-item {
           display: flex;
           flex-direction: column;

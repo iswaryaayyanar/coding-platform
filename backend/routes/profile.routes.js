@@ -1,17 +1,8 @@
-const express = require("express");
+import express from "express";
+import { getUserProfile } from "../controllers/profile.controller.js";
+
 const router = express.Router();
 
-const {
-  getUserProfile
-} = require("../controllers/profile.controller");
+router.get("/:id", getUserProfile);
 
-const authenticate = require("../middleware/auth.middleware");
-
-/**
- * @route   GET /api/profile
- * @desc    Get logged-in user's profile & stats
- * @access  Private
- */
-router.get("/", authenticate, getUserProfile);
-
-module.exports = router;
+export default router;

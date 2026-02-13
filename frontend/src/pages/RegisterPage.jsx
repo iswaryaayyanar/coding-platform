@@ -378,7 +378,7 @@ const RegisterPage = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style >{`
         /* Page Layout */
         .register-page {
           min-height: 100vh;

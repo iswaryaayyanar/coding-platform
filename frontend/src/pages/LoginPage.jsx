@@ -13,21 +13,31 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+ const handleLogin = async (e) => {
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-    try {
-      const res = await api.post("/login", { username, password });
-      login(res.data.user);
-      navigate("/");
-    } catch {
-      setError("Invalid credentials. Don't have an account?");
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    const res = await api.post("/login", { username, password });
+
+    const userData = res.data.user;
+
+    // 🔥 SAVE USER DATA
+    localStorage.setItem("userId", userData.id);
+    localStorage.setItem("username", userData.username);
+    localStorage.setItem("role", userData.role);
+
+    login(userData);
+
+    navigate("/home"); // use /home (not "/")
+  } catch {
+    setError("Invalid credentials. Don't have an account?");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="login-page">
@@ -270,7 +280,7 @@ const LoginPage = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         /* Page Layout */
         .login-page {
           min-height: 100vh;
