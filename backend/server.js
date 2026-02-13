@@ -18,7 +18,6 @@ const PISTON_API = "https://emkc.org/api/v2/piston";
 app.use(cors());
 app.use(express.json());
 
-// Debug middleware
 app.use((req, res, next) => {
   console.log(`📡 ${req.method} ${req.url}`);
   next();
@@ -36,12 +35,23 @@ app.use("/api/companies", companiesRoutes);
 app.post("/api/register", async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ message: "All fields required" });
 
-    const [existingUser] = await db.query("SELECT id FROM users WHERE username = ?", [username]);
-    if (existingUser.length > 0) return res.status(409).json({ message: "Username already exists" });
+    if (!username || !password)
+      return res.status(400).json({ message: "All fields required" });
 
-    await db.query("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", [username, password, "Student"]);
+    const [existingUser] = await db.query(
+      "SELECT id FROM users WHERE username = ?",
+      [username]
+    );
+
+    if (existingUser.length > 0)
+      return res.status(409).json({ message: "Username already exists" });
+
+    await db.query(
+      "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+      [username, password, "Student"]
+    );
+
     res.status(201).json({ success: true });
   } catch (error) {
     console.error("Register Error:", error);
@@ -53,11 +63,20 @@ app.post("/api/login", async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    const [users] = await db.query("SELECT * FROM users WHERE username = ? AND password = ?", [username, password]);
-    if (users.length === 0) return res.status(401).json({ message: "Invalid credentials" });
+    const [users] = await db.query(
+      "SELECT * FROM users WHERE username = ? AND password = ?",
+      [username, password]
+    );
+
+    if (users.length === 0)
+      return res.status(401).json({ message: "Invalid credentials" });
 
     const user = users[0];
-    const [[solvedData]] = await db.query("SELECT COUNT(*) as solved_count FROM solved WHERE user_id = ?", [user.id]);
+
+    const [[solvedData]] = await db.query(
+      "SELECT COUNT(*) as solved_count FROM solved WHERE user_id = ?",
+      [user.id]
+    );
 
     res.json({
       user: {
@@ -75,21 +94,38 @@ app.post("/api/login", async (req, res) => {
 });
 
 // =======================
-// PROBLEMS ROUTES
+// PROBLEMS (UPDATED)
 // =======================
 app.get("/api/problems", async (req, res) => {
   try {
-    const { userId } = req.query;
+    const { userId, company } = req.query;
 
-    const [problems] = await db.query(
-      `
-      SELECT p.*, CASE WHEN s.id IS NOT NULL THEN 1 ELSE 0 END AS is_solved
+    let query = `
+      SELECT 
+        p.id,
+        p.title,
+        p.description,
+        p.difficulty,
+        p.function_signature,
+        p.created_at,
+        c.name AS company_name,
+        CASE WHEN s.id IS NOT NULL THEN 1 ELSE 0 END AS is_solved
       FROM programs p
-      LEFT JOIN solved s ON p.id = s.program_id AND s.user_id = ?
-      ORDER BY p.difficulty, p.title
-      `,
-      [userId || null]
-    );
+      JOIN companies c ON p.company_id = c.id
+      LEFT JOIN solved s 
+        ON p.id = s.program_id AND s.user_id = ?
+    `;
+
+    const params = [userId || null];
+
+    if (company) {
+      query += " WHERE c.name LIKE ? ";
+      params.push(`%${company}%`);
+    }
+
+    query += " ORDER BY p.difficulty, p.title";
+
+    const [problems] = await db.query(query, params);
 
     res.json(problems);
   } catch (error) {
@@ -102,10 +138,23 @@ app.get("/api/problems/:programId", async (req, res) => {
   try {
     const { programId } = req.params;
 
-    const [programs] = await db.query("SELECT * FROM programs WHERE id = ?", [programId]);
-    if (programs.length === 0) return res.status(404).json({ message: "Problem not found" });
+    const [programs] = await db.query(
+      `
+      SELECT p.*, c.name AS company_name
+      FROM programs p
+      JOIN companies c ON p.company_id = c.id
+      WHERE p.id = ?
+      `,
+      [programId]
+    );
 
-    const [testCases] = await db.query("SELECT * FROM test_cases WHERE program_id = ? AND is_public = 1", [programId]);
+    if (programs.length === 0)
+      return res.status(404).json({ message: "Problem not found" });
+
+    const [testCases] = await db.query(
+      "SELECT * FROM test_cases WHERE program_id = ? AND is_public = 1",
+      [programId]
+    );
 
     res.json({
       problem: programs[0],
@@ -122,16 +171,16 @@ app.get("/api/problems/:programId", async (req, res) => {
 // =======================
 app.get("/api/users/:id/stats", async (req, res) => {
   try {
-    const userId = req.params.id;
     const [[stats]] = await db.query(
       `
-      SELECT COUNT(s.id) AS solved,
-             COUNT(s.id) * 10 AS score
-      FROM solved s
-      WHERE s.user_id = ?
+      SELECT COUNT(id) AS solved,
+             COUNT(id) * 10 AS score
+      FROM solved
+      WHERE user_id = ?
       `,
-      [userId]
+      [req.params.id]
     );
+
     res.json(stats);
   } catch (error) {
     console.error("Stats Error:", error);
@@ -144,10 +193,12 @@ app.get("/api/users/:id/stats", async (req, res) => {
 // =======================
 app.get("/api/users/:id/streak", async (req, res) => {
   try {
-    const userId = req.params.id;
     const [rows] = await db.query(
-      `SELECT DISTINCT DATE(solved_at) as day FROM solved WHERE user_id = ? ORDER BY day DESC`,
-      [userId]
+      `SELECT DISTINCT DATE(solved_at) as day 
+       FROM solved 
+       WHERE user_id = ? 
+       ORDER BY day DESC`,
+      [req.params.id]
     );
 
     let streak = 0;
@@ -155,7 +206,10 @@ app.get("/api/users/:id/streak", async (req, res) => {
 
     for (let row of rows) {
       const solvedDay = new Date(row.day);
-      if (Math.floor((today - solvedDay) / (1000 * 60 * 60 * 24)) === streak) streak++;
+      if (
+        Math.floor((today - solvedDay) / (1000 * 60 * 60 * 24)) === streak
+      )
+        streak++;
       else break;
     }
 
@@ -167,12 +221,10 @@ app.get("/api/users/:id/streak", async (req, res) => {
 });
 
 // =======================
-// USER ACTIVITY (DAILY SOLVES FOR CHART)
+// USER ACTIVITY
 // =======================
 app.get("/api/users/:id/activity", async (req, res) => {
   try {
-    const userId = req.params.id;
-
     const [data] = await db.query(
       `
       SELECT DATE(solved_at) as day, COUNT(*) as problems
@@ -181,7 +233,7 @@ app.get("/api/users/:id/activity", async (req, res) => {
       GROUP BY day
       ORDER BY day
       `,
-      [userId]
+      [req.params.id]
     );
 
     res.json(data);
@@ -196,8 +248,6 @@ app.get("/api/users/:id/activity", async (req, res) => {
 // =======================
 app.get("/api/users/:id/last-problem", async (req, res) => {
   try {
-    const userId = req.params.id;
-
     const [[last]] = await db.query(
       `
       SELECT p.id, p.title, p.difficulty, s.solved_at
@@ -207,7 +257,7 @@ app.get("/api/users/:id/last-problem", async (req, res) => {
       ORDER BY s.solved_at DESC
       LIMIT 1
       `,
-      [userId]
+      [req.params.id]
     );
 
     res.json(last || null);
@@ -222,8 +272,6 @@ app.get("/api/users/:id/last-problem", async (req, res) => {
 // =======================
 app.get("/api/users/:id/recommended", async (req, res) => {
   try {
-    const userId = req.params.id;
-
     const [recommendations] = await db.query(
       `
       SELECT *
@@ -234,7 +282,7 @@ app.get("/api/users/:id/recommended", async (req, res) => {
       ORDER BY RAND()
       LIMIT 5
       `,
-      [userId]
+      [req.params.id]
     );
 
     res.json(recommendations);
@@ -249,11 +297,9 @@ app.get("/api/users/:id/recommended", async (req, res) => {
 // =======================
 app.get("/api/users/:id/badges", async (req, res) => {
   try {
-    const userId = req.params.id;
-
     const [[{ solved }]] = await db.query(
       "SELECT COUNT(*) as solved FROM solved WHERE user_id = ?",
-      [userId]
+      [req.params.id]
     );
 
     const badges = [];
@@ -292,7 +338,7 @@ app.get("/api/leaderboard", async (req, res) => {
 });
 
 // =======================
-// RUN CODE (PISTON)
+// RUN CODE
 // =======================
 app.post("/api/run", async (req, res) => {
   try {
@@ -316,7 +362,7 @@ app.post("/api/run", async (req, res) => {
 });
 
 // =======================
-// FALLBACK 404
+// 404 FALLBACK
 // =======================
 app.use((req, res) => {
   res.status(404).json({ message: `Route ${req.originalUrl} not found` });
