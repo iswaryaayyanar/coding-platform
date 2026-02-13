@@ -5,12 +5,16 @@ import db from "./db.js";
 import dotenv from "dotenv";
 import submitRoutes from "./routes/submit.route.js";
 import companiesRoutes from "./routes/companies.route.js";
+import profileRoutes from "./routes/profile.routes.js";
+
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const PISTON_API = "https://emkc.org/api/v2/piston";
+
+
 
 // =======================
 // MIDDLEWARE
@@ -267,6 +271,8 @@ app.get("/api/users/:id/last-problem", async (req, res) => {
   }
 });
 
+app.use("/api/profile", profileRoutes);
+
 // =======================
 // RECOMMENDED PROBLEMS
 // =======================
@@ -360,6 +366,8 @@ app.post("/api/run", async (req, res) => {
     res.status(500).json({ message: "Code execution failed" });
   }
 });
+
+
 
 // =======================
 // 404 FALLBACK

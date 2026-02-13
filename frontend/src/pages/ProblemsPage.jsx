@@ -277,7 +277,7 @@ const ProblemsPage = () => {
         )}
       </div>
 
-      <style jsx>{`
+      <style >{`
         .problems-page {
           min-height: 100vh;
           background: linear-gradient(to bottom, #f9fafb 0%, #ffffff 100%);

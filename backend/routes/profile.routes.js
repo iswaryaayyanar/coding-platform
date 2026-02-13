@@ -1,17 +1,23 @@
-const express = require("express");
+import express from "express";
+import { getUserProfile } from "../controllers/profile.controller.js";
+
 const router = express.Router();
 
-const {
-  getUserProfile
-} = require("../controllers/profile.controller");
-
-const authenticate = require("../middleware/auth.middleware");
-
 /**
- * @route   GET /api/profile
- * @desc    Get logged-in user's profile & stats
- * @access  Private
+ * GET user profile by ID
+ * Example:
+ * /api/profile/5
  */
-router.get("/", authenticate, getUserProfile);
+router.get("/:id", async (req, res) => {
+  try {
+    // Inject id into req.user so controller works
+    req.user = { id: req.params.id };
 
-module.exports = router;
+    await getUserProfile(req, res);
+  } catch (err) {
+    console.error("Profile route error:", err);
+    res.status(500).json({ message: "Route failure" });
+  }
+});
+
+export default router;
