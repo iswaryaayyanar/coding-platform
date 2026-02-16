@@ -175,17 +175,62 @@ app.get("/api/problems/:programId", async (req, res) => {
 // =======================
 app.get("/api/users/:id/stats", async (req, res) => {
   try {
-    const [[stats]] = await db.query(
-      `
-      SELECT COUNT(id) AS solved,
-             COUNT(id) * 10 AS score
-      FROM solved
-      WHERE user_id = ?
-      `,
-      [req.params.id]
+    const userId = req.params.id;
+
+    // Total solved
+    const [[solved]] = await db.query(
+      `SELECT COUNT(*) AS solved
+       FROM solved
+       WHERE user_id = ?`,
+      [userId]
     );
 
-    res.json(stats);
+    // Total problems
+    const [[total]] = await db.query(
+      `SELECT COUNT(*) AS total FROM programs`
+    );
+
+    // ===============================
+    // Difficulty TOTAL counts
+    // ===============================
+    const [difficultyTotals] = await db.query(`
+      SELECT difficulty, COUNT(*) as count
+      FROM programs
+      GROUP BY difficulty
+    `);
+
+    // ===============================
+    // Difficulty SOLVED counts
+    // ===============================
+    const [difficultySolved] = await db.query(`
+      SELECT p.difficulty, COUNT(*) as count
+      FROM solved s
+      JOIN programs p ON s.program_id = p.id
+      WHERE s.user_id = ?
+      GROUP BY p.difficulty
+    `,[userId]);
+
+    // Convert to objects
+    const totals = { Easy:0, Medium:0, Hard:0 };
+    const solvedMap = { Easy:0, Medium:0, Hard:0 };
+
+    difficultyTotals.forEach(r => totals[r.difficulty] = r.count);
+    difficultySolved.forEach(r => solvedMap[r.difficulty] = r.count);
+
+    res.json({
+      solved: solved.solved,
+      total: total.total,
+      score: solved.solved * 10,
+
+      easySolved: solvedMap.Easy,
+      mediumSolved: solvedMap.Medium,
+      hardSolved: solvedMap.Hard,
+
+      easyTotal: totals.Easy,
+      mediumTotal: totals.Medium,
+      hardTotal: totals.Hard
+    });
+
   } catch (error) {
     console.error("Stats Error:", error);
     res.status(500).json({ message: "Failed to fetch stats" });
