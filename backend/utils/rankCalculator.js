@@ -10,10 +10,9 @@ export const calculateRank = (users) => {
     score: u.solved_count * 10,
   }));
 
-  // Sort descending by score
   usersWithScore.sort((a, b) => b.score - a.score);
 
-  // Assign rank (handle ties)
+
   let currentRank = 1;
   usersWithScore.forEach((user, index) => {
     if (index > 0 && user.score === usersWithScore[index - 1].score) {

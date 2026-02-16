@@ -349,25 +349,44 @@ app.get("/api/leaderboard", async (req, res) => {
 // =======================
 app.post("/api/run", async (req, res) => {
   try {
-    const { code, language, input } = req.body;
+    const { code, language } = req.body;
 
-    const response = await axios.post(`${PISTON_API}/execute`, {
-      language,
-      version: "*",
-      files: [{ content: code }],
-      stdin: input || "",
-    });
+    // Map your frontend language names to JDoodle format
+    const langMap = {
+      python: { language: "python3", versionIndex: "4" },
+      javascript: { language: "nodejs", versionIndex: "4" },
+      java: { language: "java", versionIndex: "4" },
+      cpp: { language: "cpp", versionIndex: "5" },
+      c: { language: "c", versionIndex: "5" }
+    };
 
-    res.json({
-      output: response.data.run.stdout || response.data.run.stderr,
-      success: !response.data.run.stderr,
+    const selected = langMap[language];
+
+    if (!selected) {
+      return res.status(400).json({ error: "Unsupported language" });
+    }
+
+    const response = await axios.post(
+      "https://api.jdoodle.com/v1/execute",
+      {
+        script: code,
+        language: selected.language,
+        versionIndex: selected.versionIndex,
+        clientId: process.env.JDOODLE_CLIENT_ID,
+        clientSecret: process.env.JDOODLE_CLIENT_SECRET
+      }
+    );
+
+    res.json(response.data);
+
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).json({
+      error: "Execution failed",
+      details: err.response?.data || err.message
     });
-  } catch (error) {
-    console.error("Run Code Error:", error.message);
-    res.status(500).json({ message: "Code execution failed" });
   }
 });
-
 
 
 // =======================

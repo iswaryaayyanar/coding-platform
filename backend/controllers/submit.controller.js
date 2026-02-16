@@ -1,36 +1,44 @@
 import axios from "axios";
 import db from "../db.js";
 
-const PISTON_API = "https://emkc.org/api/v2/piston";
-
 export const submitSolution = async (req, res) => {
   try {
     const { userId, programId, code, language } = req.body;
 
-    // ============================
-    // VALIDATION
-    // ============================
     if (!userId || !programId || !code || !language) {
-      return res.status(400).json({
-        message: "Missing required fields",
-      });
+      return res.status(400).json({ message: "Missing fields" });
     }
 
-    const normalizedLanguage = language.toLowerCase();
+    // =========================
+    // Language Map for JDoodle
+    // =========================
+    const langMap = {
+      python: { language: "python3", versionIndex: "4" },
+      javascript: { language: "nodejs", versionIndex: "4" },
+      java: { language: "java", versionIndex: "4" },
+      cpp: { language: "cpp", versionIndex: "5" },
+      c: { language: "c", versionIndex: "5" }
+    };
 
-    // ============================
-    // FETCH HIDDEN TEST CASES
-    // ============================
+    const selected = langMap[language.toLowerCase()];
+
+    if (!selected) {
+      return res.status(400).json({ message: "Unsupported language" });
+    }
+
+    // =========================
+    // Fetch Hidden Test Cases
+    // =========================
     const [testCases] = await db.query(
       `SELECT * FROM test_cases
        WHERE program_id = ? AND is_public = 0
-       ORDER BY order_index ASC`,
+       ORDER BY order_index`,
       [programId]
     );
 
     if (!testCases.length) {
       return res.status(400).json({
-        message: "No hidden test cases found",
+        message: "No hidden test cases"
       });
     }
 
@@ -38,31 +46,25 @@ export const submitSolution = async (req, res) => {
     let failed = 0;
     const results = [];
 
-    // ============================
-    // EXECUTE TESTS
-    // ============================
+    // =========================
+    // Run Each Test Case
+    // =========================
     for (const tc of testCases) {
-      const exec = await axios.post(`${PISTON_API}/execute`, {
-        language: normalizedLanguage,
-        version: "*",
-        files: [{ content: code }],
-        stdin: tc.input,
-      });
 
-      const run = exec.data.run;
+      const response = await axios.post(
+        "https://api.jdoodle.com/v1/execute",
+        {
+          script: code,
+          stdin: tc.input,
+          language: selected.language,
+          versionIndex: selected.versionIndex,
+          clientId: process.env.JDOODLE_CLIENT_ID,
+          clientSecret: process.env.JDOODLE_CLIENT_SECRET
+        }
+      );
 
-      if (!run || run.code !== 0) {
-        return res.status(400).json({
-          message: "Compilation / Runtime Error",
-          error: run?.stderr || "Unknown error",
-        });
-      }
-
-      const normalize = (s) =>
-        (s || "").replace(/\r\n/g, "\n").trim();
-
-      const output = normalize(run.stdout);
-      const expected = normalize(tc.expected_output);
+      const output = (response.data.output || "").trim();
+      const expected = (tc.expected_output || "").trim();
 
       const ok = output === expected;
 
@@ -70,7 +72,7 @@ export const submitSolution = async (req, res) => {
         testCaseId: tc.id,
         passed: ok,
         output,
-        expected,
+        expected
       });
 
       if (ok) passed++;
@@ -82,9 +84,14 @@ export const submitSolution = async (req, res) => {
 
     const success = failed === 0;
 
-    // ============================
-    // RECORD SUBMISSION HISTORY
-    // ============================
+    console.log("SUCCESS:", success);
+   console.log("PASSED:", passed);
+  console.log("FAILED:", failed);
+console.log("USER:", userId);
+console.log("PROGRAM:", programId);
+    // =========================
+    // Store Submission
+    // =========================
     await db.query(
       `INSERT INTO submissions
        (user_id, program_id, language, passed)
@@ -92,9 +99,9 @@ export const submitSolution = async (req, res) => {
       [userId, programId, language, success]
     );
 
-    // ============================
-    // MARK AS SOLVED (ONLY ONCE)
-    // ============================
+    // =========================
+    // Mark Solved
+    // =========================
     if (success) {
       await db.query(
         `INSERT IGNORE INTO solved
@@ -104,23 +111,20 @@ export const submitSolution = async (req, res) => {
       );
     }
 
-    // ============================
-    // RESPONSE
-    // ============================
     return res.json({
       success,
       passed,
       failed,
       total: testCases.length,
-      results,
+      results
     });
 
-  } catch (error) {
-    console.error("Submit Controller Error:", error);
+  } catch (err) {
+    console.error("SUBMIT ERROR:", err.response?.data || err.message);
 
     return res.status(500).json({
       message: "Submission failed",
-      error: error.message,
+      error: err.response?.data || err.message
     });
   }
 };

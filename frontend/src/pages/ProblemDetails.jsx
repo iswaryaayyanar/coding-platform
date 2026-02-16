@@ -210,7 +210,7 @@ const ProblemDetails = () => {
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { overflow: hidden; }
+  
 
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: #f1f5f9; }
@@ -218,7 +218,8 @@ const ProblemDetails = () => {
   ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
   .problem-page {
-    height: 100vh;
+     min-height: calc(100vh - 60px);
+    height: 100%;
     background: #ffffff;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     color: #1e293b;
@@ -228,16 +229,19 @@ const ProblemDetails = () => {
   }
 
   .top-bar {
-    height: 52px;
-    background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
-    flex-shrink: 0;
-    z-index: 10;
-  }
+  height: 52px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+  z-index: 10;
+  position: sticky;
+  top: 0;
+}
+
 
   .top-bar-left {
     display: flex;
