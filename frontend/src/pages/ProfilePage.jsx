@@ -76,15 +76,17 @@ const ProfilePage = () => {
   // ===============================
   // HEATMAP HELPER
   // ===============================
-  const heatMapDict = {};
-  heatmap.forEach(d => (heatMapDict[d.date] = d.count));
+ const heatMapDict = {};
+ heatmap.forEach(d => (heatMapDict[d.date] = d.count));
+
 
   const generateHeatDays = () => {
     const days = [];
     for (let i = 89; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const key = date.toISOString().slice(0, 10);
+      const key =date.getFullYear() +"-" +String(date.getMonth()+1).padStart(2,"0") + "-" +String(date.getDate()).padStart(2,"0");
+
       days.push({ date: key, count: heatMapDict[key] || 0 });
     }
     return days;

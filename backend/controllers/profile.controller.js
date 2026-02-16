@@ -105,18 +105,15 @@ export const getUserProfile = async (req, res) => {
     // =====================================================
     // HEATMAP DATA (FIXED)
     // =====================================================
-    const [heatmapRows] = await db.query(
-      `
-      SELECT
-        DATE(solved_at) AS date,
-        COUNT(*) AS count
-      FROM solved
-      WHERE user_id=?
-      AND solved_at >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)
-      GROUP BY DATE(solved_at)
-      `,
-      [userId]
-    );
+const [heatmapRows] = await db.query(`
+SELECT
+  DATE_FORMAT(solved_at,'%Y-%m-%d') AS date,
+  COUNT(*) AS count
+FROM solved
+WHERE user_id=?
+GROUP BY DATE_FORMAT(solved_at,'%Y-%m-%d')
+ORDER BY date
+`, [userId]);
 
     // =====================================================
     // STREAK CALCULATION (FIXED)
